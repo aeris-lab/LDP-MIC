@@ -34,6 +34,8 @@ LDP-MIC/
 └── docs/                     # Additional documentation
 ```
 
+**Note**: Some large-scale experiments (privacy-utility tradeoffs, convergence analysis, scalability) were conducted on an HPC cluster and are provided as Python scripts rather than notebooks for efficiency.
+
 ## Installation
 
 ### Prerequisites
@@ -91,16 +93,16 @@ python scripts/run_privacy_utility.py \
 
 ### Main Experiments
 
-| Figure/Table | Description | Notebook/Script | Est. Time (1 GPU) |
+| Figure/Table | Description | Script/Notebook | Est. Time (1 GPU) |
 |--------------|-------------|-----------------|-------------------|
-| Figure 3 | Privacy-utility tradeoff (Adult) | `notebooks/01_privacy_utility_tradeoff.ipynb` | ~2 hours |
-| Figure 4 | Privacy-utility tradeoff (MNIST variants) | `notebooks/01_privacy_utility_tradeoff.ipynb` | ~4 hours |
-| Figure 5 | Convergence analysis (Adult) | `notebooks/02_convergence_analysis.ipynb` | ~2 hours |
-| Figure 6 | Convergence analysis (MNIST variants) | `notebooks/02_convergence_analysis.ipynb` | ~3 hours |
+| Figure 3 | Privacy-utility tradeoff (Adult) | `scripts/run_privacy_utility.py` | ~2 hours |
+| Figure 4 | Privacy-utility tradeoff (MNIST variants) | `scripts/run_privacy_utility.py` | ~4 hours |
+| Figure 5 | Convergence analysis (Adult) | `scripts/run_convergence.py` | ~2 hours |
+| Figure 6 | Convergence analysis (MNIST variants) | `scripts/run_convergence.py` | ~3 hours |
 | Figure 7 | Label-flipping robustness | `notebooks/03_label_flipping_robustness.ipynb` | ~1 hour |
-| Figure 8 | Gradient leakage resilience | `notebooks/05_gradient_leakage.ipynb` | ~30 min |
-| Figure 9 | Scalability analysis | `notebooks/06_scalability.ipynb` | ~2 hours |
-| Table 2 | Backdoor attack success rate | `notebooks/04_backdoor_resilience.ipynb` | ~1 hour |
+| Figure 8 | Gradient leakage resilience | `notebooks/04_gradient_leakage.ipynb` | ~30 min |
+| Figure 9 | Scalability analysis | `scripts/run_scalability.py` | ~2 hours |
+| Table 2 | Backdoor attack success rate | `notebooks/05_backdoor_resilience.ipynb` | ~1 hour |
 | Table 3 | Trust-based detection performance | `notebooks/03_label_flipping_robustness.ipynb` | ~1 hour |
 
 ### Running All Experiments
