@@ -1,129 +1,240 @@
-# MIC_DP: Maximum Information Coefficient Differential Privacy
+# LDP-MIC: Correlation-Aware Local Differential Privacy for Federated Learning
 
-`mic_dp` is a Python package that enables differentially private data transformation guided by the *Maximum Information Coefficient* (MIC), with application to both supervised and unsupervised learning tasks. Traditional differential privacy (DP) mechanisms often degrade utility uniformly across features. In contrast, `mic_dp` uses MIC to scale the noise injection, preserving more utility in informative features.
+## Overview
 
-## Summary
+LDP-MIC is a correlation-adaptive local differential privacy framework for federated learning under untrusted aggregation. By adapting client-side noise to feature–target dependence via the Maximum Information Coefficient (MIC), LDP-MIC mitigates the utility degradation typical of LDP in heterogeneous, non-IID settings while enforcing all privacy guarantees locally.
 
-This package includes functions for:
-- Calculating MIC, Pearson, and Mahalanobis-based feature relevance
-- Feature selection based on scaled importance
-- Applying Gaussian or Laplace DP mechanisms using custom noise scaling
-- Evaluating MAE, clustering scores, and plotting results
+## Key Features
 
-Our experiments show that MIC-guided DP mechanisms consistently outperform Pearson, Mahalanobis, and baseline DP in terms of feature and prediction accuracy under privacy constraints. In unsupervised settings, MIC-DP preserves cluster structures better, as shown by silhouette score, ARI, and V-measure.
+- **Correlation-aware noise allocation** using Maximum Information Coefficient (MIC)
+- **(ε,δ)-LDP guarantees** without requiring a trusted aggregator
+- **Trust-based aggregation** for robustness against poisoning attacks
+- **Linear scalability** with number of clients and feature dimensions
+- **No additional communication overhead** compared to standard FedAvg
+
+## Repository Structure
+
+```
+LDP-MIC/
+├── README.md                 # This file
+├── LICENSE                   # MIT License
+├── requirements.txt          # Python dependencies
+├── src/                      # Core implementation
+│   ├── ldp_mic.py           # Main LDP-MIC algorithm
+│   ├── mic_computation.py   # MIC calculation utilities
+│   ├── noise_calibration.py # Adaptive sensitivity calibration
+│   ├── trust_aggregation.py # Trust-based server aggregation
+│   ├── attacks/             # Attack implementations
+│   └── baselines/           # Baseline methods
+├── configs/                  # Experiment configurations
+├── notebooks/                # Jupyter notebooks for experiments
+├── scripts/                  # Execution scripts
+│   └── hpc/                 # HPC cluster scripts (optional)
+├── data/                     # Dataset utilities
+└── docs/                     # Additional documentation
+```
 
 ## Installation
 
-You can install the package directly from PyPI:
+### Prerequisites
+
+- Python 3.9+
+- PyTorch 2.0+
+- CUDA 11.8+ (for GPU acceleration)
+
+### Setup
+
+1. Clone the repository:
 
 ```bash
-pip install micdp
+git clone https://anonymous.4open.science/r/LDP-MIC
+cd LDP-MIC
 ```
 
-<!--Or install from source:
+2. Create a virtual environment:
 
 ```bash
-git clone https://github.com/merlery/mic_dp.git
-cd mic_dp
-pip install -e .
+conda create -n ldpmic python=3.10
+conda activate ldpmic
 ```
--->
+
+3. Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+4. Download datasets:
+
+```bash
+python data/download_datasets.py --all
+```
+
 ## Quick Start
 
-Here's a simple example of how to use `mic_dp` for supervised learning:
-
-```python
-import pandas as pd
-import numpy as np
-from sklearn.preprocessing import MinMaxScaler
-from mic_dp.core import (
-    noise_scaling_MIC, 
-    calculate_sensitivity, 
-    correlated_dp_gaussian,
-    mean_absolute_error
-)
-
-# Load and preprocess your data
-df = pd.read_csv('your_dataset.csv')
-df.dropna(inplace=True)
-X = df.select_dtypes(include=['number'])
-X_norm = pd.DataFrame(MinMaxScaler().fit_transform(X), columns=X.columns)
-y = df['target_column']  # Your target variable
-
-# Calculate MIC-based noise scaling factors
-noise_factors = noise_scaling_MIC(y, X_norm, amplification_factor=5)
-
-# Calculate sensitivity for each feature
-sensitivity = calculate_sensitivity(X_norm)
-
-# Apply differential privacy with MIC-guided noise scaling
-private_X = correlated_dp_gaussian(
-    X_norm.copy(), 
-    noise_factors, 
-    sensitivity, 
-    epsilon=0.5,  # Privacy budget
-    delta=1e-5    # Privacy relaxation parameter
-)
-
-# Evaluate the utility loss
-mae = mean_absolute_error(X_norm, private_X)
-print(f"Mean Absolute Error: {mae:.4f}")
-```
-
-## Detailed Example
-
-For a more comprehensive example, see the [supervised_experiment.py](examples/supervised_experiment.py) script, which demonstrates:
-
-1. Loading and preprocessing the Adult Census Income dataset
-2. Calculating feature relevance using MIC, Pearson, and Mahalanobis methods
-3. Applying differential privacy with different noise scaling strategies
-4. Evaluating and comparing the utility of each approach
-5. Visualizing the results
-
-To run the example:
+Run a basic privacy-utility experiment on the Adult Census Income dataset:
 
 ```bash
-python examples/supervised_experiment.py
+python scripts/run_privacy_utility.py --dataset adult --epsilon 1.0
 ```
 
-## Experimental Results
+Run with multiple privacy budgets:
 
-MIC-guided noise scaling consistently outperforms conventional approaches in preserving prediction accuracy and clustering structure under differential privacy constraints.
+```bash
+python scripts/run_privacy_utility.py \
+    --dataset adult \
+    --epsilon 0.5 1.0 2.0 5.0 10.0 \
+    --seeds 5
+```
 
-<p align="center">
-  <img src="MAE.png" alt="Feature MAE comparison for MIC-DP vs. state-of-art approaches" width="400"/>&nbsp;
-  <img src="MAE_pred.png" alt="Prediction MAE comparison for MIC-DP vs. state-of-art approaches" width="400"/>
-</p>
+## Reproducing Paper Results
 
+### Main Experiments
 
-## API Reference
+| Figure/Table | Description | Notebook/Script | Est. Time (1 GPU) |
+|--------------|-------------|-----------------|-------------------|
+| Figure 3 | Privacy-utility tradeoff (Adult) | `notebooks/01_privacy_utility_tradeoff.ipynb` | ~2 hours |
+| Figure 4 | Privacy-utility tradeoff (MNIST variants) | `notebooks/01_privacy_utility_tradeoff.ipynb` | ~4 hours |
+| Figure 5 | Convergence analysis (Adult) | `notebooks/02_convergence_analysis.ipynb` | ~2 hours |
+| Figure 6 | Convergence analysis (MNIST variants) | `notebooks/02_convergence_analysis.ipynb` | ~3 hours |
+| Figure 7 | Label-flipping robustness | `notebooks/03_label_flipping_robustness.ipynb` | ~1 hour |
+| Figure 8 | Gradient leakage resilience | `notebooks/05_gradient_leakage.ipynb` | ~30 min |
+| Figure 9 | Scalability analysis | `notebooks/06_scalability.ipynb` | ~2 hours |
+| Table 2 | Backdoor attack success rate | `notebooks/04_backdoor_resilience.ipynb` | ~1 hour |
+| Table 3 | Trust-based detection performance | `notebooks/03_label_flipping_robustness.ipynb` | ~1 hour |
 
-### Core Functions
+### Running All Experiments
 
-- `noise_scaling_MIC(target, features, factor)`: Calculate noise scaling factors based on Maximum Information Coefficient
-- `noise_scaling_pearson(target, features, factor)`: Calculate noise scaling factors based on Pearson correlation
-- `noise_scaling_mahalanobis_distances(target, features, factor)`: Calculate noise scaling factors based on Mahalanobis distances
-- `calculate_sensitivity(features)`: Calculate sensitivity for each feature based on its range
-- `correlated_dp_gaussian(X, noise_factors, sensitivity, epsilon, delta)`: Apply Gaussian differential privacy with custom noise scaling
-- `correlated_dp_laplace(X, noise_factors, sensitivity, epsilon, delta)`: Apply Laplace differential privacy with custom noise scaling
-- `feature_selection(percentage, X, noise_scaling_factor)`: Select features based on their noise scaling factors
-- `mean_absolute_error(y_true, y_pred)`: Calculate mean absolute error between true and predicted values
+To reproduce all main results:
+
+```bash
+bash scripts/run_all_experiments.sh
+```
+
+Results will be saved to `results/figures/` and `results/tables/`.
+
+## Hardware Requirements
+
+### Minimum (for verification)
+
+- CPU: 8+ cores
+- RAM: 16GB
+- GPU: NVIDIA GPU with 8GB+ VRAM (e.g., RTX 3070)
+- Storage: 10GB free space
+- Time: ~15 hours for full reproduction
+
+### Recommended (for faster execution)
+
+- CPU: 16+ cores
+- RAM: 32GB
+- GPU: NVIDIA GPU with 24GB+ VRAM (e.g., RTX 3090/4090)
+- Time: ~6 hours for full reproduction
+
+### Paper Experiments
+
+Experiments in the paper were conducted on a **multi-GPU HPC cluster** to parallelize large-scale client simulations and accelerate repeated experimental runs. However, all experiments rely only on **standard PyTorch operations** and do not require specialized hardware or interconnect features. Equivalent results can be reproduced on commodity multi-GPU systems.
+
+| Hardware | Estimated Time |
+|----------|----------------|
+| Single RTX 3090/4090 | ~24 hours |
+| Multi-GPU workstation (4x GPUs) | ~6 hours |
+| Cloud instance (8x V100) | ~3 hours |
+
+## Datasets
+
+All datasets used are publicly available benchmarks:
+
+| Dataset | Source | Size | Task |
+|---------|--------|------|------|
+| Adult Census Income | UCI ML Repository | 48,842 samples | Binary classification |
+| MNIST | Yann LeCun | 70,000 samples | 10-class classification |
+| Fashion-MNIST | Zalando Research | 70,000 samples | 10-class classification |
+| EMNIST | NIST | 814,255 samples | 62-class classification |
+| CH-MNIST | CASIA | 10,000 samples | 10-class classification |
+
+Datasets are automatically downloaded when running:
+
+```bash
+python data/download_datasets.py --all
+```
+
+## Configuration
+
+Experiment configurations are stored in YAML files under `configs/`. Example configuration for Adult dataset:
+
+```yaml
+dataset:
+  name: adult
+  num_clients: 50
+  partition: non_iid_occupation
+
+model:
+  architecture: mlp
+  hidden_layers: [128, 64, 32]
+
+training:
+  rounds: 400
+  local_epochs: 1
+  batch_size: 128
+  learning_rate: 0.01
+  clip_bound: 1.0
+
+privacy:
+  epsilon: [0.5, 1.0, 2.0, 5.0, 10.0]
+  delta: 1e-5
+  mic_budget_ratio: 0.2
+
+aggregation:
+  sample_rate: 0.2
+  trust_weights: [0.4, 0.3, 0.3]
+  trust_threshold: 0.4
+```
+
+## Algorithm Overview
+
+LDP-MIC operates in three phases on each client:
+
+1. **Phase 1 - Correlation Analysis**: Compute privatized MIC scores between features and target
+2. **Phase 2 - Noise Calibration**: Allocate privacy budget inversely proportional to MIC scores
+3. **Phase 3 - Training & Privatization**: Train on locally privatized data and send updates
+
+The server performs trust-aware aggregation using only privatized updates, requiring no trust assumptions.
+
+## Expected Results
+
+Results should match the paper within ±1-2% due to random seed variation. Key expected outcomes:
+
+- **Privacy-Utility (Adult, ε=1.0)**: LDP-MIC ~61% vs Standard LDP ~54%
+- **Privacy-Utility (MNIST, ε=10.0)**: LDP-MIC ~90% vs Standard LDP ~82%
+- **Label-Flipping Defense**: 95% TPR, 2% FPR by round 50
+- **Backdoor ASR Reduction**: 30.6 percentage points vs No-DP
+
+## Troubleshooting
+
+### Common Issues
+
+**CUDA out of memory**: Reduce batch size in config or use gradient accumulation:
+```bash
+python scripts/run_privacy_utility.py --batch_size 32 --grad_accumulation 4
+```
+
+**MIC computation slow**: Enable parallel computation:
+```bash
+python scripts/run_privacy_utility.py --mic_parallel --mic_workers 4
+```
+
+**Dataset download fails**: Manually download from source URLs listed in `data/README.md`
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-<!--## Acknowledgements
+## Citation
 
-This material is based upon work supported by the U.S. Department of Energy, Office of Science, Office of Advanced Scientific Computing Research under Contract No. DE-AC05-00OR22725. This manuscript has been co-authored by UT-Battelle, LLC under Contract No. DE-AC05-00OR22725 with the U.S. Department of Energy. The United States Government retains and the publisher, by accepting the article for publication, acknowledges that the United States Government retains a non-exclusive, paid-up, irrevocable, world-wide license to publish or reproduce the published form of this manuscript, or allow others to do so, for United States Government purposes. The Department of Energy will provide public access to these results of federally sponsored research in accordance with the DOE Public Access Plan (http://energy.gov/downloads/doe-public-access-plan).
+```bibtex
+[Citation will be added after de-anonymization]
+```
 
-## AERIS Lab
+## Acknowledgments
 
-<img src="aires-lab.png" alt="AERIS Lab at UW Tacoma" width="160" align="left"/>
-
-<div align="justify">
-This work is conducted and supported by AERIS Lab at the University of Washington Tacoma. At the AERIS Lab (AI & Embedded Research in Intelligent Systems), we advance the frontier of intelligent, secure, and networked technologies for the Internet of Things (IoT), edge computing, and cyber-physical systems. Our mission is to design, develop, and deploy scalable AI-driven architectures that enable real-time decision-making, privacy-preserving analytics, and seamless integration of sensing, computing, and communication. We emphasize responsible AI, sustainability, and societal impact through interdisciplinary research in smart infrastructure, embedded intelligence, and trustworthy computing. For more information, please visit: http://faculty.uw.edu/ealmasri
-</div>-->
-
-
-## References
+We thank the anonymous reviewers for their valuable feedback.
