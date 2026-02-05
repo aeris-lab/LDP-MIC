@@ -1,9 +1,35 @@
-diffprivlib
-scikit-learn
-pandas
-numpy
-matplotlib
-seaborn
-scipy
-lifelines
-statsmodels
+# Core dependencies for LDP-MIC
+# Tested on Python 3.10
+
+# For NVIDIA GPUs (default):
+#   pip install torch torchvision
+# For AMD GPUs (ROCm):
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/rocm5.6
+
+# Deep Learning
+torch>=2.0.0
+torchvision>=0.15.0
+torchmetrics>=1.0.0
+
+# Differential Privacy
+opacus>=1.4.0
+
+# Data Processing
+numpy>=1.24.0
+pandas>=2.0.0
+scipy>=1.10.0
+scikit-learn>=1.2.0
+
+# MIC Computation (optional - falls back to sklearn mutual_info if unavailable)
+# minepy>=1.2.6
+
+# Visualization
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# Utilities
+tqdm>=4.65.0
+Pillow>=9.0.0
+
+# Testing (optional)
+pytest>=7.0.0

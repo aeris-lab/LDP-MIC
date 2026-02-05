@@ -1,1 +1,0 @@
-# MIC_DP Documentation
