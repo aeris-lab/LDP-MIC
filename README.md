@@ -1,8 +1,12 @@
 # LDP-MIC: Correlation-Aware Local Differential Privacy for Federated Learning
 
+[![Paper](https://img.shields.io/badge/USENIX%20Security-2026-blue)](https://anonymous.4open.science/r/LDP-MIC)
+
 ## Overview
 
 LDP-MIC is a correlation-adaptive local differential privacy framework for federated learning under untrusted aggregation. By adapting client-side noise to feature–target dependence via the Maximum Information Coefficient (MIC), LDP-MIC mitigates the utility degradation typical of LDP in heterogeneous, non-IID settings while enforcing all privacy guarantees locally.
+
+**Key Innovation**: Unlike standard LDP that applies uniform noise, LDP-MIC allocates privacy budget asymmetrically across features based on their correlation with the target variable—applying less noise to informative features and more to less salient ones—while maintaining rigorous (ε,δ)-LDP guarantees.
 
 ## Key Features
 
@@ -11,6 +15,26 @@ LDP-MIC is a correlation-adaptive local differential privacy framework for feder
 - **MIC-based input normalization** for improved utility under differential privacy
 - **Support for both CDP and LDP modes**
 - **Compatible with NVIDIA CUDA and AMD ROCm GPUs**
+
+## Computational Infrastructure
+
+> **Note**: The experiments reported in this paper were conducted on an **AMD-based supercomputer** equipped with AMD Instinct MI250X GPUs. The infrastructure leveraged ROCm (Radeon Open Compute) for high-performance distributed training, enabling large-scale federated learning simulations with hundreds of clients.
+
+### Why AMD GPUs?
+
+Our research infrastructure utilizes AMD Instinct accelerators for:
+- **Scalability**: Parallelizing large-scale client simulations across multiple GPUs
+- **Performance**: High memory bandwidth (3.2 TB/s on MI250X) for gradient computations
+- **ROCm Ecosystem**: Native PyTorch support via `torch.cuda` API compatibility
+
+### Reproducibility on Other Hardware
+
+All experiments rely only on **standard PyTorch operations** and are fully compatible with:
+- **NVIDIA GPUs**: CUDA 11.8+ (tested on A100, V100, RTX 3090)
+- **AMD GPUs**: ROCm 5.6+ (tested on MI250X, MI210)
+- **CPU**: For debugging and small-scale testing
+
+Equivalent results can be reproduced on commodity hardware with appropriate runtime scaling.
 
 ## Repository Structure
 
@@ -31,12 +55,13 @@ LDP-MIC/
 │   └── quick_test.py        # Quick validation test
 ├── scripts/                  # Execution scripts
 │   ├── hpc/                 # HPC cluster scripts
-│   ├── E1_*.sh              # Experiment 1 scripts (various datasets)
-│   └── setup.sh             # Environment setup
-├── configs/                  # Experiment configurations
+│   └── E1-E4_*.sh           # Experiment scripts
 ├── notebooks/                # Jupyter notebooks for analysis
+│   ├── 03_label_flipping_robustness.ipynb
+│   ├── 04_gradient_leakage.ipynb
+│   └── 05_backdoor_resilience.ipynb
+├── configs/                  # Experiment configurations
 ├── data/                     # Dataset directory
-├── docs/                     # Additional documentation
 └── results/                  # Output directory
 ```
 
@@ -64,7 +89,7 @@ conda activate ldpmic
 
 3. Install PyTorch:
 ```bash
-# For NVIDIA GPUs:
+# For NVIDIA GPUs (CUDA):
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
 
 # For AMD GPUs (ROCm):
@@ -96,17 +121,6 @@ python src/FedAverage.py \
     --epsilon 8
 ```
 
-### Run baseline LDP (without MIC):
-```bash
-python src/FedAverage.py \
-    --data mnist \
-    --nclient 100 \
-    --model mnist_fully_connected_IN \
-    --mode LDP \
-    --round 150 \
-    --epsilon 8
-```
-
 ### Compare methods:
 ```bash
 python src/compare_methods.py
@@ -116,11 +130,11 @@ python src/compare_methods.py
 
 | Argument | Description | Default |
 |----------|-------------|---------|
-| `--data` | Dataset: mnist, cifar10, cifar100, fashionmnist, emnist, purchase, chmnist | mnist |
+| `--data` | Dataset name | mnist |
 | `--nclient` | Number of clients | 100 |
 | `--nclass` | Number of classes | 10 |
 | `--ncpc` | Classes per client (non-IID) | 2 |
-| `--model` | Model architecture (see below) | mnist_fully_connected_IN |
+| `--model` | Model architecture | mnist_fully_connected_IN |
 | `--mode` | Privacy mode: LDP or CDP | LDP |
 | `--round` | Number of FL rounds | 150 |
 | `--epsilon` | Privacy budget ε | 8 |
@@ -128,41 +142,45 @@ python src/compare_methods.py
 | `--sr` | Client sample rate | 1.0 |
 | `--physical_bs` | Max physical batch size (Opacus) | 3 |
 
-### Available Models
+## Datasets
+
+All datasets used in this paper are publicly available:
+
+| Dataset | Source | Samples | Classes | Task |
+|---------|--------|---------|---------|------|
+| Adult Census Income (ACI) | UCI ML Repository | 48,842 | 2 | Income prediction (>$50K) |
+| MNIST | torchvision | 70,000 | 10 | Digit recognition |
+| Fashion-MNIST | torchvision | 70,000 | 10 | Clothing classification |
+| EMNIST | torchvision | 814,255 | 62 | Character recognition |
+| CH-MNIST | CASIA | 10,000 | 10 | Chinese handwriting |
+
+### Non-IID Partitioning
+
+- **Adult Census Income**: Partitioned by occupation attribute across clients
+- **MNIST variants**: Dirichlet-based label-skew partitioning (α=0.5)
+
+Datasets are automatically downloaded on first run (except CH-MNIST which requires manual setup).
+
+## Available Models
 
 | Model | Description |
 |-------|-------------|
 | `mnist_fully_connected_MIC` | MNIST MLP with MIC-based normalization |
 | `mnist_fully_connected_IN` | MNIST MLP with standard InputNorm |
-| `mnist_fully_connected` | MNIST MLP baseline |
+| `mnist_fully_connected` | MNIST MLP baseline (no normalization) |
 | `resnet18_MIC` | ResNet-18 with MIC normalization |
 | `resnet18_IN` | ResNet-18 with InputNorm |
 | `alexnet_MIC` | AlexNet with MIC normalization |
 | `purchase_fully_connected_MIC` | Purchase dataset MLP with MIC |
 
-## Reproducing Paper Results
+## Experiment Scripts
 
-### Main Experiments
-
-| Figure/Table | Description | Command |
-|--------------|-------------|---------|
-| Figure 3 | Privacy-utility (Adult) | `bash scripts/E1_purchase.sh` |
-| Figure 4 | Privacy-utility (MNIST variants) | `bash scripts/E1_mnist.sh` |
-| Figure 5 | Convergence (Adult) | See scripts/E3_*.sh |
-| Figure 7 | Label-flipping robustness | `notebooks/03_label_flipping.ipynb` |
-| Table 2 | Backdoor attack | `notebooks/05_backdoor.ipynb` |
-
-### Run all experiments for a dataset:
-```bash
-# MNIST experiments
-bash scripts/E1_mnist.sh
-
-# CIFAR-10 experiments  
-bash scripts/E1_cifar10.sh
-
-# Fashion-MNIST experiments
-bash scripts/E1_fashionmnist.sh
-```
+| Script | Description | Paper Reference |
+|--------|-------------|-----------------|
+| `E1_*.sh` | Privacy-utility tradeoff | Figure 3-4 |
+| `E2_*.sh` | Varying privacy budgets | Figure 4 |
+| `E3_*.sh` | Convergence analysis | Figure 5-6 |
+| `E4_*.sh` | Additional experiments | Table 2 |
 
 ## Hardware Requirements
 
@@ -172,39 +190,22 @@ bash scripts/E1_fashionmnist.sh
 - GPU: 8GB VRAM (NVIDIA or AMD)
 - Storage: 10GB
 
-### Paper Experiments
-Experiments were conducted on a **multi-GPU HPC cluster with AMD GPUs**. However, all code uses standard PyTorch operations and works on any CUDA or ROCm compatible GPU.
+### Estimated Runtime
 
-| Hardware | Estimated Time (Full Reproduction) |
-|----------|-----------------------------------|
+| Hardware | Full Reproduction |
+|----------|-------------------|
 | Single GPU (8GB) | ~24 hours |
 | Single GPU (24GB) | ~12 hours |
-| Multi-GPU (4x) | ~6 hours |
-
-## Datasets
-
-All datasets are publicly available:
-
-| Dataset | Source | Samples | Classes |
-|---------|--------|---------|---------|
-| MNIST | torchvision | 70,000 | 10 |
-| Fashion-MNIST | torchvision | 70,000 | 10 |
-| CIFAR-10 | torchvision | 60,000 | 10 |
-| CIFAR-100 | torchvision | 60,000 | 100 |
-| EMNIST | torchvision | 814,255 | 62 |
-| Purchase | UCI | 197,324 | 100 |
-| CH-MNIST | Custom | 10,000 | 10 |
-
-Datasets are automatically downloaded on first run.
+| Multi-GPU cluster | ~3-6 hours |
 
 ## MIC Computation
 
-The MIC (Maximum Information Coefficient) computation uses:
-1. **minepy** library (if installed) - original MINE algorithm
+The MIC (Maximum Information Coefficient) computation supports multiple backends:
+1. **minepy** library (recommended) - original MINE algorithm
 2. **scikit-learn** mutual information (fallback)
 3. **Correlation-based** approximation (last resort)
 
-To install minepy (optional):
+To install minepy:
 ```bash
 pip install minepy
 ```
@@ -213,24 +214,18 @@ pip install minepy
 
 Results should match paper within ±2% due to randomness:
 
-| Dataset | ε | LDP-MIC | Standard LDP |
-|---------|---|---------|--------------|
-| MNIST | 8 | ~89% | ~82% |
-| CIFAR-10 | 8 | ~58% | ~51% |
-| Fashion-MNIST | 8 | ~78% | ~71% |
+| Dataset | ε | LDP-MIC | Standard LDP | Gap |
+|---------|---|---------|--------------|-----|
+| Adult (ACI) | 10 | ~69.5% | ~59.5% | +10% |
+| MNIST | 8 | ~89% | ~82% | +7% |
+| Fashion-MNIST | 8 | ~75% | ~65% | +10% |
+| EMNIST | 8 | ~75% | ~65% | +10% |
 
 ## Troubleshooting
 
-### CUDA Out of Memory
-Reduce physical batch size:
+### CUDA/ROCm Out of Memory
 ```bash
-python src/FedAverage.py --physical_bs 1
-```
-
-### Opacus Compatibility
-The code includes a fix for PyTorch 2.6+ compatibility:
-```python
-torch.load = functools.partial(torch.load, weights_only=False)
+python src/FedAverage.py --physical_bs 1 ...
 ```
 
 ### AMD GPU Issues
@@ -238,6 +233,12 @@ Ensure ROCm is properly installed:
 ```bash
 rocm-smi  # Check GPU status
 python -c "import torch; print(torch.cuda.is_available())"
+```
+
+### Opacus Compatibility
+The code includes a fix for PyTorch 2.6+ compatibility:
+```python
+torch.load = functools.partial(torch.load, weights_only=False)
 ```
 
 ## License
