@@ -190,14 +190,6 @@ Datasets are automatically downloaded on first run (except CH-MNIST which requir
 - GPU: 8GB VRAM (NVIDIA or AMD)
 - Storage: 10GB
 
-### Estimated Runtime
-
-| Hardware | Full Reproduction |
-|----------|-------------------|
-| Single GPU (8GB) | ~24 hours |
-| Single GPU (24GB) | ~12 hours |
-| Multi-GPU cluster | ~3-6 hours |
-
 ## MIC Computation
 
 The MIC (Maximum Information Coefficient) computation supports multiple backends:
@@ -209,17 +201,6 @@ To install minepy:
 ```bash
 pip install minepy
 ```
-
-## Expected Results
-
-Results should match paper within ±2% due to randomness:
-
-| Dataset | ε | LDP-MIC | Standard LDP | Gap |
-|---------|---|---------|--------------|-----|
-| Adult (ACI) | 10 | ~69.5% | ~59.5% | +10% |
-| MNIST | 8 | ~89% | ~82% | +7% |
-| Fashion-MNIST | 8 | ~75% | ~65% | +10% |
-| EMNIST | 8 | ~75% | ~65% | +10% |
 
 ## Troubleshooting
 
