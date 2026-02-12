@@ -1,0 +1,2 @@
+data,num_client,ncpc,mode,model,epsilon,accuracy
+mnist,5,2,LDP,mnist_fully_connected_MIC,8,0.49246616441096075

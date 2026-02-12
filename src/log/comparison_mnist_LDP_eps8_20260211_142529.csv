@@ -1,0 +1,3 @@
+experiment,model,mode,epsilon,accuracy,status
+Baseline (mnist_fully_connected_IN),mnist_fully_connected_IN,LDP,8,0.543636242416161,success
+MIC-based (mnist_fully_connected_MIC),mnist_fully_connected_MIC,LDP,8,0.49246616441096075,success

@@ -8,8 +8,7 @@ import numpy as np
 import time
 
 class CDPUser:
-    # CDPUser order was already correct: input_shape, then n_classes
-    def __init__(self, index, device, model, input_shape, n_classes, train_dataloader, epochs, max_norm=1.0, disc_lr=5e-3, flr = 1e-1):
+    def __init__(self, index, device, model, input_shape, n_classes, train_dataloader, epochs, max_norm=1.0, disc_lr=5e-3, flr=1e-1):
         self.index = index
         if 'linear_model' in model:
             if input_shape == 1024:
@@ -21,8 +20,6 @@ class CDPUser:
         self.train_dataloader = train_dataloader
         self.loss_fn = torch.nn.CrossEntropyLoss()
         self.disc_lr = disc_lr
-        
-        # Torchmetrics Fix (v1.0+)
         self.acc_metric = torchmetrics.Accuracy(task="multiclass", num_classes=n_classes).to(device)
 
         self.device = device
@@ -84,9 +81,7 @@ class CDPUser:
                     self.model.state_dict()[key].data.copy_(weights[key])
 
 class LDPUser(CDPUser):
-    # FIXED: Swapped 'n_classes' and 'input_shape' to match FedAverage.py call order
-    def __init__(self, index, device, model, input_shape, n_classes, train_dataloader, epochs, rounds, target_epsilon, target_delta, sr, max_norm=2.0, disc_lr=5e-1, mp_bs = 3):
-        # Pass them to super in the correct order too
+    def __init__(self, index, device, model, input_shape, n_classes, train_dataloader, epochs, rounds, target_epsilon, target_delta, sr, max_norm=2.0, disc_lr=5e-1, mp_bs=3):
         super().__init__(index, device, model, input_shape, n_classes, train_dataloader, epochs=epochs, max_norm=max_norm, disc_lr=disc_lr)
         self.rounds = rounds
         self.target_epsilon = target_epsilon

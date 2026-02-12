@@ -16,7 +16,6 @@ try:
     MIC_AVAILABLE = True
 except ImportError:
     MIC_AVAILABLE = False
-    # This is OK - we'll use default initialization
 
 def agg_weights(weights):
     with torch.no_grad():
@@ -54,17 +53,11 @@ class InputNorm(nn.Module):
 
 
 class MICNorm(nn.Module):
-    """
-    MIC-based Input Normalization layer.
-    Uses Maximum Information Coefficient to initialize transformation weights.
-    """
-    def __init__(self, num_channel, num_feature, mic_gamma: Optional[torch.Tensor] = None, 
+    def __init__(self, num_channel, num_feature, mic_gamma: Optional[torch.Tensor] = None,
                  mic_beta: Optional[torch.Tensor] = None):
         super().__init__()
         self.num_channel = num_channel
         self.num_feature = num_feature
-        
-        # Initialize with MIC-based weights if provided, otherwise use default
         if mic_gamma is not None:
             self.gamma = nn.Parameter(mic_gamma.clone().detach())
         else:
@@ -84,43 +77,27 @@ class MICNorm(nn.Module):
             return torch.einsum('...ijk, i->...ijk', x, self.gamma) + self.beta
     
     def update_with_mic(self, data_batch: torch.Tensor, labels_batch: torch.Tensor):
-        """
-        Update transformation parameters based on MIC computation.
-        This allows per-client personalization using MIC.
-        """
         if not MIC_AVAILABLE:
             return
-        
         try:
-            # Flatten data for MIC computation
             if len(data_batch.shape) > 2:
                 data_flat = data_batch.view(data_batch.size(0), -1).cpu().numpy()
             else:
                 data_flat = data_batch.cpu().numpy()
-            
             labels_np = labels_batch.cpu().numpy()
-            
-            # Compute MIC-based weights
             gamma_np, beta_np = compute_mic_weights(data_flat, labels_np)
-            
-            # Reshape and update parameters
             if self.num_channel == 1:
-                # For 1 channel, gamma is a scalar or 1D
                 if len(gamma_np.shape) == 0 or gamma_np.shape[0] == 1:
                     self.gamma.data = torch.from_numpy(gamma_np).float().to(self.gamma.device)
                 else:
-                    # Average if multiple values
                     self.gamma.data = torch.tensor(gamma_np.mean()).float().to(self.gamma.device)
             else:
-                # For 3 channels, reshape appropriately
                 if len(gamma_np) >= self.num_channel:
                     self.gamma.data = torch.from_numpy(gamma_np[:self.num_channel]).float().to(self.gamma.device)
         except Exception as e:
             print(f"Warning: Failed to update MIC weights: {e}")
         
 class resnet18(torch.nn.Module):
-    """Constructs a ResNet-18 model.
-    """
     def __init__(self, num_classes):
         super().__init__()
         self.backbone = torchvision.models.resnet18(pretrained=True)
@@ -131,8 +108,6 @@ class resnet18(torch.nn.Module):
         return logits, softmax(logits, dim=-1)
 
 class resnet18_IN(torch.nn.Module):
-    """Constructs a ResNet-18wIN model.
-    """
     def __init__(self, num_classes):
         super().__init__()
         self.backbone = torchvision.models.resnet18(pretrained=True)
@@ -149,8 +124,6 @@ class resnet18_IN(torch.nn.Module):
 
 
 class resnet18_MIC(torch.nn.Module):
-    """Constructs a ResNet-18 with MIC-based transformation.
-    """
     def __init__(self, num_classes):
         super().__init__()
         self.backbone = torchvision.models.resnet18(pretrained=True)
@@ -166,8 +139,6 @@ class resnet18_MIC(torch.nn.Module):
         return logits, softmax(logits, dim=-1)
 
 class alexnet(torch.nn.Module):
-    """Constructs a alexnet model.
-    """
     def __init__(self, num_classes):
         super().__init__()
         self.backbone = torchvision.models.alexnet(pretrained=True)
@@ -180,8 +151,6 @@ class alexnet(torch.nn.Module):
 
 
 class alexnet_IN(torch.nn.Module):
-    """Constructs a alexnet w IN model.
-    """
     def __init__(self, num_classes):
         super().__init__()
         self.backbone = torchvision.models.alexnet(pretrained=True)
@@ -196,8 +165,6 @@ class alexnet_IN(torch.nn.Module):
 
 
 class alexnet_MIC(torch.nn.Module):
-    """Constructs an alexnet with MIC-based transformation.
-    """
     def __init__(self, num_classes):
         super().__init__()
         self.backbone = torchvision.models.alexnet(pretrained=True)
@@ -232,7 +199,6 @@ class mnist_fully_connected_IN(nn.Module):
 
 
 class mnist_fully_connected_MIC(nn.Module):
-    """MNIST model with MIC-based transformation (baseline comparison)"""
     def __init__(self, num_classes):
         super(mnist_fully_connected_MIC, self).__init__()
         self.hidden1 = 600
@@ -302,7 +268,6 @@ class purchase_fully_connected_IN(nn.Module):
 
 
 class purchase_fully_connected_MIC(nn.Module):
-    """Purchase model with MIC-based transformation."""
     def __init__(self, num_classes):
         super(purchase_fully_connected_MIC, self).__init__()
         self.fc1 = nn.Linear(600, 512, bias=False)
@@ -336,8 +301,6 @@ def standardize(x, bn_stats):
     view = [1] * len(x.shape)
     view[1] = -1
     x = (x - bn_mean.reshape(view)) / torch.sqrt(bn_var.reshape(view) + 1e-5)
-
-    # if variance is too low, just ignore
     x *= (bn_var.reshape(view) != 0)
     return x
 
@@ -371,16 +334,10 @@ class FeatureNorm(nn.Module):
 
 
 class FeatureNorm_MIC(nn.Module):
-    """
-    MIC-based Feature Normalization layer.
-    Uses Maximum Information Coefficient to initialize transformation weights.
-    """
     def __init__(self, feature_shape, mic_gamma: Optional[torch.Tensor] = None,
                  mic_beta: Optional[torch.Tensor] = None):
         super().__init__()
         self.feature_shape = feature_shape
-        
-        # Initialize with MIC-based weights if provided
         if mic_gamma is not None:
             self.gamma = nn.Parameter(mic_gamma.clone().detach())
         else:
@@ -397,20 +354,12 @@ class FeatureNorm_MIC(nn.Module):
         return x
     
     def update_with_mic(self, data_batch: torch.Tensor, labels_batch: torch.Tensor):
-        """
-        Update transformation parameters based on MIC computation.
-        """
         if not MIC_AVAILABLE:
             return
-        
         try:
             data_np = data_batch.cpu().numpy()
             labels_np = labels_batch.cpu().numpy()
-            
-            # Compute MIC-based weights
             gamma_np, beta_np = compute_mic_weights(data_np, labels_np)
-            
-            # Update parameters
             self.gamma.data = torch.tensor(gamma_np.mean()).float().to(self.gamma.device)
             if len(beta_np) == self.feature_shape:
                 self.beta.data = torch.from_numpy(beta_np).float().reshape(1, -1).to(self.beta.device)
@@ -422,13 +371,8 @@ class FeatureNorm_MIC(nn.Module):
 def compute_grad_sample(
     layer: InputNorm, activations: torch.Tensor, backprops: torch.Tensor
 ) -> Dict[nn.Parameter, torch.Tensor]:
-    """
-    Computes per sample gradients for ``nn.Linear`` layer
-    Args:
-        layer: Layer
-        activations: Activations
-        backprops: Backpropagations
-    """
+    if isinstance(activations, list):
+        activations = activations[0]
     gs = torch.einsum("nk,nk->n", backprops, activations)
     ret = {layer.gamma: gs}
     if layer.beta is not None:
@@ -455,7 +399,6 @@ class linear_model_DN_IN(nn.Module):
 
 
 class linear_model_DN_MIC(nn.Module):
-    """Linear model with Data Normalization and MIC-based transformation."""
     def __init__(self, num_classes, input_shape, bn_stats=False):
         super(linear_model_DN_MIC, self).__init__()
         if not bn_stats:
@@ -479,13 +422,8 @@ class linear_model_DN_MIC(nn.Module):
 def compute_grad_sample(
     layer: InputNorm, activations: torch.Tensor, backprops: torch.Tensor
 ) -> Dict[nn.Parameter, torch.Tensor]:
-    """
-    Computes per sample gradients for ``nn.Linear`` layer
-    Args:
-        layer: Layer
-        activations: Activations
-        backprops: Backpropagations
-    """
+    if isinstance(activations, list):
+        activations = activations[0]
     gs = torch.einsum("nk...,nk...->nk", backprops, activations)
     ret = {layer.gamma: gs}
     if layer.beta is not None:
@@ -498,9 +436,8 @@ def compute_grad_sample(
 def compute_grad_sample_mic(
     layer: MICNorm, activations: torch.Tensor, backprops: torch.Tensor
 ) -> Dict[nn.Parameter, torch.Tensor]:
-    """
-    Computes per sample gradients for MICNorm layer (same as InputNorm)
-    """
+    if isinstance(activations, list):
+        activations = activations[0]
     gs = torch.einsum("nk...,nk...->nk", backprops, activations)
     ret = {layer.gamma: gs}
     if layer.beta is not None:
@@ -512,9 +449,8 @@ def compute_grad_sample_mic(
 def compute_grad_sample_feature_mic(
     layer: FeatureNorm_MIC, activations: torch.Tensor, backprops: torch.Tensor
 ) -> Dict[nn.Parameter, torch.Tensor]:
-    """
-    Computes per sample gradients for FeatureNorm_MIC layer
-    """
+    if isinstance(activations, list):
+        activations = activations[0]
     gs = torch.einsum("nk,nk->n", backprops, activations)
     ret = {layer.gamma: gs}
     if layer.beta is not None:

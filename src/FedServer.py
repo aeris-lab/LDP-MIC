@@ -27,7 +27,6 @@ class CDPServer:
                 grad =  v.detach()-weights[i][k]
                 norms.append(grad.norm(2))
             median_norm[k] = min(median(norms), 10)
-        # print(median_norm)
         return median_norm
 
     def get_model_state_dict(self):

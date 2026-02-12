@@ -1,6 +1,3 @@
-"""
-Comparison script for baseline (IN) vs MIC-based transformation methods
-"""
 import subprocess
 import sys
 import os
@@ -10,7 +7,6 @@ from datetime import datetime
 
 
 def run_experiment(data, nclient, nclass, ncpc, model, mode, round, epsilon, sr, lr, flr, physical_bs, E, experiment_name):
-    """Run a single experiment and return the result"""
     print(f"\n{'='*60}")
     print(f"Running: {experiment_name}")
     print(f"Model: {model}, Mode: {mode}, Epsilon: {epsilon}")
@@ -35,7 +31,6 @@ def run_experiment(data, nclient, nclass, ncpc, model, mode, round, epsilon, sr,
     
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        # Parse accuracy from output
         output_lines = result.stdout.split('\n')
         best_acc = None
         for line in output_lines:
@@ -65,22 +60,15 @@ def run_experiment(data, nclient, nclass, ncpc, model, mode, round, epsilon, sr,
         }
 
 
-def compare_methods(data='mnist', nclient=100, nclass=10, ncpc=2, mode='CDP', 
+def compare_methods(data='mnist', nclient=100, nclass=10, ncpc=2, mode='CDP',
                    round=60, epsilon=2, sr=1, lr=5e-3, flr=1e-2, physical_bs=64, E=1):
-    """
-    Compare baseline (IN) and MIC-based transformation methods
-    """
     results = []
-    
-    # Model mapping: baseline -> MIC
     model_mapping = {
         'mnist_fully_connected_IN': 'mnist_fully_connected_MIC',
         'resnet18_IN': 'resnet18_MIC',
         'alexnet_IN': 'alexnet_MIC',
         'purchase_fully_connected_IN': 'purchase_fully_connected_MIC'
     }
-    
-    # Determine which model to use based on data
     if data == 'mnist':
         baseline_model = 'mnist_fully_connected_IN'
         mic_model = 'mnist_fully_connected_MIC'
@@ -94,40 +82,28 @@ def compare_methods(data='mnist', nclient=100, nclass=10, ncpc=2, mode='CDP',
         print(f"Warning: No model mapping for {data}, using mnist models")
         baseline_model = 'mnist_fully_connected_IN'
         mic_model = 'mnist_fully_connected_MIC'
-    
-    # Run baseline (IN) method
     baseline_result = run_experiment(
         data, nclient, nclass, ncpc, baseline_model, mode, round, 
         epsilon, sr, lr, flr, physical_bs, E, 
         f"Baseline ({baseline_model})"
     )
     results.append(baseline_result)
-    
-    # Run MIC method
     mic_result = run_experiment(
         data, nclient, nclass, ncpc, mic_model, mode, round, 
         epsilon, sr, lr, flr, physical_bs, E, 
         f"MIC-based ({mic_model})"
     )
     results.append(mic_result)
-    
-    # Create comparison DataFrame
     df = pd.DataFrame(results)
-    
-    # Save results
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_file = f'log/comparison_{data}_{mode}_eps{epsilon}_{timestamp}.csv'
     os.makedirs('log', exist_ok=True)
     df.to_csv(output_file, index=False)
-    
-    # Print comparison
     print(f"\n{'='*60}")
     print("COMPARISON RESULTS")
     print(f"{'='*60}")
     print(df.to_string(index=False))
     print(f"\nResults saved to: {output_file}")
-    
-    # Calculate improvement
     if baseline_result['accuracy'] is not None and mic_result['accuracy'] is not None:
         improvement = mic_result['accuracy'] - baseline_result['accuracy']
         improvement_pct = (improvement / baseline_result['accuracy']) * 100
@@ -143,7 +119,7 @@ def compare_methods(data='mnist', nclient=100, nclass=10, ncpc=2, mode='CDP',
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Compare baseline (IN) vs MIC transformation methods')
+    parser = argparse.ArgumentParser()
     parser.add_argument('--data', type=str, default='mnist',
                         choices=['mnist', 'cifar10', 'cifar100', 'fashionmnist', 'emnist', 'purchase', 'chmnist'])
     parser.add_argument('--nclient', type=int, default=100)

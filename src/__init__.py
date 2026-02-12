@@ -1,8 +1,2 @@
-"""
-LDP-MIC: Correlation-Aware Local Differential Privacy for Federated Learning
-
-This package implements the LDP-MIC framework for privacy-preserving federated 
-learning under untrusted aggregation.
-"""
-
+# LDP-MIC: correlation-aware LDP for federated learning
 __version__ = "1.0.0"

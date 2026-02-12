@@ -1,6 +1,10 @@
+import os
+import time
+import argparse
 import torch
 import functools
-# FIX: Force PyTorch 2.6+ to allow loading custom model classes (Opacus fix)
+import pandas as pd
+import numpy as np
 torch.load = functools.partial(torch.load, weights_only=False)
 
 from modelUtil import *
@@ -8,8 +12,6 @@ from datasets import *
 from FedUser import CDPUser, LDPUser, opacus
 from FedServer import LDPServer, CDPServer
 from datetime import date
-import argparse
-import time
 
 start_time = time.time()
 

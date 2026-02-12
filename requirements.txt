@@ -1,28 +1,13 @@
-# LDP-MIC Dependencies
-# 
-# GPU Support:
-# - For NVIDIA GPUs (CUDA): pip install torch torchvision
-# - For AMD GPUs (ROCm): pip install torch torchvision --index-url https://download.pytorch.org/whl/rocm5.6
-
-# Core dependencies
-torch>=2.0.0
-torchvision>=0.15.0
-numpy>=1.24.0
-scipy>=1.10.0
-scikit-learn>=1.2.0
-pandas>=2.0.0
-
-# Privacy library
-opacus>=1.4.0
-
-# MIC computation (optional but recommended)
-# minepy>=1.2.6  # Install separately: pip install minepy
-
-# Utilities
-tqdm>=4.65.0
-matplotlib>=3.7.0
-pyyaml>=6.0
-
-# Jupyter notebooks
-jupyter>=1.0.0
-ipykernel>=6.0.0
+torch==2.10.0
+torchvision==0.25.0
+numpy==1.26.4
+scipy==1.11.4
+scikit-learn==1.3.2
+pandas==2.1.4
+opacus==1.4.0
+torchmetrics==1.2.1
+tqdm==4.66.1
+matplotlib==3.8.2
+pyyaml==6.0.1
+jupyter==1.0.0
+ipykernel==6.29.0
